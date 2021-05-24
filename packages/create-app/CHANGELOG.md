@@ -1,5 +1,29 @@
 # @backstage/create-app
 
+## 1.0.0
+
+### Patch Changes
+
+- f86ab6d49: Added newer entity relationship cards to the default `@backstage/create-app` template:
+
+  - `EntityDependsOnComponentsCard`
+  - `EntityDependsOnResourcesCard`
+  - `EntityHasResourcesCard`
+  - `EntityHasSubcomponentsCard`
+
+  The `EntityLinksCard` was also added to the overview page. To apply these to your Backstage application, compare against the updated [EntityPage.tsx](https://github.com/backstage/backstage/blob/371760ca2493c8f63e9b44ecc57cc8488131ba5b/packages/create-app/templates/default-app/packages/app/src/components/catalog/EntityPage.tsx)
+
+- Updated dependencies [0fd4ea443]
+- Updated dependencies [add62a455]
+- Updated dependencies [1cd0cacd9]
+- Updated dependencies [4ea9df9d3]
+- Updated dependencies [bf805b467]
+  - @backstage/plugin-catalog-backend@0.10.0
+  - @backstage/catalog-client@0.3.12
+  - @backstage/catalog-model@0.7.11
+  - @backstage/cli@0.6.13
+  - @backstage/plugin-techdocs@0.9.4
+
 ## 0.3.22
 
 ### Patch Changes
