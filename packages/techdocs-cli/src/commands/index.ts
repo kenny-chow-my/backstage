@@ -242,6 +242,11 @@ export function registerCommands(program: Command) {
       'Do not use Docker, use MkDocs executable in current user environment.',
     )
     .option('--mkdocs-port <PORT>', 'Port for MkDocs server to use', '8000')
+    .option(
+      '--mkdocs-url <URL>',
+      'Remote URL that hosts a published site. This is useful for previewing site built on GitHub/GitLab pages, or custom hosted storage like S3. e.g. http://myexample.pages.github.com/preview-techdocs-pages/index.html',
+      'http://127.0.0.1',
+    )
     .option('-v --verbose', 'Enable verbose output.', false)
     .action(lazy(() => import('./serve/serve').then(m => m.default)));
 }
