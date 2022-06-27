@@ -22,7 +22,6 @@ import HTTPServer from '../../lib/httpServer';
 import { runMkdocsServer } from '../../lib/mkdocsServer';
 import { LogFunc, waitForSignal } from '../../lib/run';
 import { createLogger } from '../../lib/utility';
-import { ChildProcess } from 'child_process';
 
 function findPreviewBundlePath(): string {
   try {
@@ -60,7 +59,7 @@ export default async function serve(opts: OptionValues) {
   const backstageBackendPort = 7007;
 
   const mkdocsDockerAddr = `http://0.0.0.0:${opts.mkdocsPort}`;
-  const mkdocsLocalAddr = `${opts.mkdocsUrl}:${opts.mkdocsPort}`;
+  const mkdocsLocalAddr = `http://127.0.0.1:${opts.mkdocsPort}`;
   const mkdocsExpectedDevAddr = opts.docker
     ? mkdocsDockerAddr
     : mkdocsLocalAddr;
@@ -89,77 +88,54 @@ export default async function serve(opts: OptionValues) {
   // mkdocs writes all of its logs to stderr by default, and not stdout.
   // https://github.com/mkdocs/mkdocs/issues/879#issuecomment-203536006
   // Had me questioning this whole implementation for half an hour.
-  const startMkDocsServer =
-    opts.mkdocsUrl === 'http://127.0.0.1' ? true : false;
-  let mkdocsChildProcess: ChildProcess | null;
-  if (startMkDocsServer) {
-    logger.info('Starting mkdocs server.');
-    mkdocsChildProcess = await runMkdocsServer({
-      port: opts.mkdocsPort,
-      dockerImage: opts.dockerImage,
-      dockerEntrypoint: opts.dockerEntrypoint,
-      useDocker: opts.docker,
-      stdoutLogFunc: mkdocsLogFunc,
-      stderrLogFunc: mkdocsLogFunc,
-    });
+  logger.info('Starting mkdocs server.');
+  const mkdocsChildProcess = await runMkdocsServer({
+    port: opts.mkdocsPort,
+    dockerImage: opts.dockerImage,
+    dockerEntrypoint: opts.dockerEntrypoint,
+    useDocker: opts.docker,
+    stdoutLogFunc: mkdocsLogFunc,
+    stderrLogFunc: mkdocsLogFunc,
+  });
 
-    // Wait until mkdocs server has started so that Backstage starts with docs loaded
-    // Takes 1-5 seconds
-    for (let attempt = 0; attempt < 30; attempt++) {
-      await new Promise(r => setTimeout(r, 3000));
-      if (mkdocsServerHasStarted) {
-        break;
-      }
-      logger.info('Waiting for mkdocs server to start...');
+  // Wait until mkdocs server has started so that Backstage starts with docs loaded
+  // Takes 1-5 seconds
+  for (let attempt = 0; attempt < 30; attempt++) {
+    await new Promise(r => setTimeout(r, 3000));
+    if (mkdocsServerHasStarted) {
+      break;
     }
+    logger.info('Waiting for mkdocs server to start...');
+  }
 
-    if (!mkdocsServerHasStarted) {
-      logger.error(
-        'mkdocs server did not start. Exiting. Try re-running command with -v option for more details.',
-      );
-    }
-  } else {
-    logger.info(
-      `Not starting local MkDocs server. Using remote instance instead: ${opts.mkdocsUrl}`,
+  if (!mkdocsServerHasStarted) {
+    logger.error(
+      'mkdocs server did not start. Exiting. Try re-running command with -v option for more details.',
     );
-    mkdocsChildProcess = null;
   }
 
   const port = isDevMode ? backstageBackendPort : backstagePort;
   const httpServer = new HTTPServer(
     findPreviewBundlePath(),
     port,
-    startMkDocsServer,
-    opts.mkdocsUrl,
     opts.mkdocsPort,
     opts.verbose,
   );
 
-  const serverObj = await httpServer
+  httpServer
     .serve()
     .catch(err => {
       logger.error(err);
-      if (mkdocsChildProcess) mkdocsChildProcess.kill();
+      mkdocsChildProcess.kill();
       process.exit(1);
     })
-    .then(server => {
+    .then(() => {
       // The last three things default/component/local/ don't matter. They can be anything.
       openBrowser(`http://localhost:${port}/docs/default/component/local/`);
       logger.info(
         `Serving docs in Backstage at http://localhost:${port}/docs/default/component/local/\nOpening browser.`,
       );
-      return server;
     });
 
-  for (let attempt = 0; attempt < 100; attempt++) {
-    await new Promise(r => setTimeout(r, 3000));
-    if (!serverObj.listening) {
-      break;
-    }
-    logger.info('Listening');
-  }
-
-  if (mkdocsChildProcess) {
-    await waitForSignal([mkdocsChildProcess]);
-  }
+  await waitForSignal([mkdocsChildProcess]);
 }

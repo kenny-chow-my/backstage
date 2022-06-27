@@ -23,24 +23,18 @@ export default class HTTPServer {
   private readonly proxyEndpoint: string;
   private readonly backstageBundleDir: string;
   private readonly backstagePort: number;
-  private readonly startMkDocsServer: boolean;
-  private readonly mkdocsUrl: string;
   private readonly mkdocsPort: number;
   private readonly verbose: boolean;
 
   constructor(
     backstageBundleDir: string,
     backstagePort: number,
-    startMkDocsServer: boolean,
-    mkdocsUrl: string,
     mkdocsPort: number,
     verbose: boolean,
   ) {
     this.proxyEndpoint = '/api/techdocs/';
     this.backstageBundleDir = backstageBundleDir;
     this.backstagePort = backstagePort;
-    this.startMkDocsServer = startMkDocsServer;
-    this.mkdocsUrl = mkdocsUrl;
     this.mkdocsPort = mkdocsPort;
     this.verbose = verbose;
   }
@@ -48,15 +42,8 @@ export default class HTTPServer {
   // Create a Proxy for mkdocs server
   private createProxy() {
     const proxy = httpProxy.createProxyServer({
-      target: this.startMkDocsServer
-        ? `http://127.0.0.1:${this.mkdocsPort}`
-        : this.mkdocsUrl,
-      followRedirects: true,
-      changeOrigin: true,
+      target: `http://localhost:${this.mkdocsPort}`,
     });
-    console.log(
-      `proxy request  target: ${this.startMkDocsServer} ? http://127.0.0.1:${this.mkdocsPort} : ${this.mkdocsUrl}`,
-    );
 
     return (request: http.IncomingMessage): [httpProxy, string] => {
       // If the request path is prefixed with this.proxyEndpoint, remove it.
@@ -84,7 +71,6 @@ export default class HTTPServer {
 
             request.url = forwardPath;
             proxy.web(request, response);
-
             return;
           }
 
@@ -103,7 +89,7 @@ export default class HTTPServer {
         },
       );
 
-      const logger = createLogger({ verbose: true });
+      const logger = createLogger({ verbose: false });
       server.listen(this.backstagePort, () => {
         if (this.verbose) {
           logger.info(
