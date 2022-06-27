@@ -141,7 +141,7 @@ export async function createRouter(
     cache,
   });
 
-  const proxyDocs = async (req, res) => {
+  router.all('/static/docs/techdocs-preview*', async (req, res) => {
     // Parsing out component and basepath from /static/docs/techdocs-preview/${component}/${basepath}/
     const spliturl = req.url.split('/');
     const component = spliturl[4];
@@ -153,16 +153,12 @@ export async function createRouter(
       secure: false,
     };
     const proxy = httpProxy.createProxyServer(opt);
-    req.url = req.url
-      ? req.url.replace(
-          `/static/docs/techdocs-preview/${component}/${basepath}/`,
-          '',
-        )
-      : '';
+    req.url = req.url?.replace(
+      `/static/docs/techdocs-preview/${component}/${basepath}/`,
+      '',
+    );
     proxy.web(req, res, opt);
-  };
-
-  router.all('/static/docs/techdocs-preview*', proxyDocs);
+  });
 
   router.get('/metadata/techdocs/:namespace/:kind/:name', async (req, res) => {
     const { kind, namespace, name } = req.params;
