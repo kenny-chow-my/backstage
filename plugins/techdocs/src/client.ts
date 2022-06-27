@@ -67,6 +67,15 @@ export class TechDocsClient implements TechDocsApi {
   ): Promise<TechDocsMetadata> {
     const { kind, namespace, name } = entityId;
 
+    if (namespace === 'techdocs-preview') {
+      const mockTechDocsMetadata = {
+        site_name: 'preview-component',
+        site_description: 'this is a preview component',
+      };
+
+      return mockTechDocsMetadata;
+    }
+
     const apiOrigin = await this.getApiOrigin();
     const requestUrl = `${apiOrigin}/metadata/techdocs/${namespace}/${kind}/${name}`;
     const request = await this.fetchApi.fetch(`${requestUrl}`);
@@ -89,6 +98,21 @@ export class TechDocsClient implements TechDocsApi {
     entityId: CompoundEntityRef,
   ): Promise<TechDocsEntityMetadata> {
     const { kind, namespace, name } = entityId;
+
+    if (namespace === 'techdocs-preview') {
+      const mockEntityMetadata = {
+        apiVersion: 'v1',
+        kind: 'Component',
+        metadata: {
+          name: 'preview',
+          namespace: 'default',
+        },
+        spec: {
+          owner: 'preview',
+        },
+      };
+      return mockEntityMetadata;
+    }
 
     const apiOrigin = await this.getApiOrigin();
     const requestUrl = `${apiOrigin}/metadata/entity/${namespace}/${kind}/${name}`;
@@ -156,10 +180,8 @@ export class TechDocsStorageClient implements TechDocsStorageApi {
 
     const storageUrl = await this.getStorageUrl();
     const url = `${storageUrl}/${namespace}/${kind}/${name}/${path}`;
-
-    const request = await this.fetchApi.fetch(
-      `${url.endsWith('/') ? url : `${url}/`}index.html`,
-    );
+    const target = `${url.endsWith('/') ? url : `${url}/`}index.html`;
+    const request = await this.fetchApi.fetch(target);
 
     let errorMessage = '';
     switch (request.status) {

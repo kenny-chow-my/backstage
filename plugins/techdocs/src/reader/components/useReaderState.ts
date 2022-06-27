@@ -292,38 +292,42 @@ export function useReaderState(
     }, 1000);
 
     try {
-      const result = await techdocsStorageApi.syncEntityDocs(
-        {
-          kind,
-          namespace,
-          name,
-        },
-        log => {
-          dispatch({ type: 'buildLog', log });
-        },
-      );
+      if (namespace === 'techdocs-preview') {
+        dispatch({ type: 'sync', state: 'BUILD_READY' });
+      } else {
+        const result = await techdocsStorageApi.syncEntityDocs(
+          {
+            kind,
+            namespace,
+            name,
+          },
+          log => {
+            dispatch({ type: 'buildLog', log });
+          },
+        );
 
-      switch (result) {
-        case 'updated':
-          // if there was no content prior to building, retry the loading
-          if (!contentRef.current.content) {
-            contentRef.current.reload();
-            dispatch({ type: 'sync', state: 'BUILD_READY_RELOAD' });
-          } else {
-            dispatch({ type: 'sync', state: 'BUILD_READY' });
-          }
-          break;
-        case 'cached':
-          dispatch({ type: 'sync', state: 'UP_TO_DATE' });
-          break;
+        switch (result) {
+          case 'updated':
+            // if there was no content prior to building, retry the loading
+            if (!contentRef.current.content) {
+              contentRef.current.reload();
+              dispatch({ type: 'sync', state: 'BUILD_READY_RELOAD' });
+            } else {
+              dispatch({ type: 'sync', state: 'BUILD_READY' });
+            }
+            break;
+          case 'cached':
+            dispatch({ type: 'sync', state: 'UP_TO_DATE' });
+            break;
 
-        default:
-          dispatch({
-            type: 'sync',
-            state: 'ERROR',
-            syncError: new Error('Unexpected return state'),
-          });
-          break;
+          default:
+            dispatch({
+              type: 'sync',
+              state: 'ERROR',
+              syncError: new Error('Unexpected return state'),
+            });
+            break;
+        }
       }
     } catch (e) {
       dispatch({ type: 'sync', state: 'ERROR', syncError: e });

@@ -40,6 +40,8 @@ import {
 } from './DocsBuildStrategy';
 import * as winston from 'winston';
 import { PassThrough } from 'stream';
+import http from 'http';
+import httpProxy from 'http-proxy';
 
 /**
  * Required dependencies for running TechDocs in the "out-of-the-box"
@@ -138,6 +140,29 @@ export async function createRouter(
     scmIntegrations,
     cache,
   });
+
+  const proxyDocs = async (req, res) => {
+    // Parsing out component and basepath from /static/docs/techdocs-preview/${component}/${basepath}/
+    const spliturl = req.url.split('/');
+    const component = spliturl[4];
+    const basepath = spliturl[5];
+    const opt = {
+      target: `https://${component}/${basepath}/`,
+      followRedirects: true,
+      changeOrigin: true,
+      secure: false,
+    };
+    const proxy = httpProxy.createProxyServer(opt);
+    req.url = req.url
+      ? req.url.replace(
+          `/static/docs/techdocs-preview/${component}/${basepath}/`,
+          '',
+        )
+      : '';
+    proxy.web(req, res, opt);
+  };
+
+  router.all('/static/docs/techdocs-preview*', proxyDocs);
 
   router.get('/metadata/techdocs/:namespace/:kind/:name', async (req, res) => {
     const { kind, namespace, name } = req.params;
@@ -288,7 +313,6 @@ export async function createRouter(
 
   // Route middleware which serves files from the storage set in the publisher.
   router.use('/static/docs', publisher.docsRouter());
-
   return router;
 }
 
