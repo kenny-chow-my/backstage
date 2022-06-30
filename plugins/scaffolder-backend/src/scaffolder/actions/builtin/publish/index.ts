@@ -29,3 +29,4 @@ export type {
 } from './githubPullRequest';
 export { createPublishGitlabAction } from './gitlab';
 export { createPublishGitlabMergeRequestAction } from './gitlabMergeRequest';
+export { createPublishGitlabIssueAction } from './gitlabIssue';

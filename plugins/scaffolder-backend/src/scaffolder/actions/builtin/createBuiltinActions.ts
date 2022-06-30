@@ -53,6 +53,7 @@ import {
   createPublishGithubPullRequestAction,
   createPublishGitlabAction,
   createPublishGitlabMergeRequestAction,
+  createPublishGitlabIssueAction,
 } from './publish';
 
 /**
@@ -132,6 +133,9 @@ export const createBuiltinActions = (
       config,
     }),
     createPublishGitlabMergeRequestAction({
+      integrations,
+    }),
+    createPublishGitlabIssueAction({
       integrations,
     }),
     createPublishBitbucketAction({
