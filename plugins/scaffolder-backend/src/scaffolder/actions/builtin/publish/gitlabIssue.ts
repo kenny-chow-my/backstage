@@ -15,8 +15,6 @@
  */
 import { createTemplateAction } from '../../createTemplateAction';
 import { Gitlab } from '@gitbeaker/node';
-import { Types } from '@gitbeaker/core';
-import path from 'path';
 import { ScmIntegrationRegistry } from '@backstage/integration';
 import { InputError } from '@backstage/errors';
 import { parseRepoUrl } from './util';
@@ -36,18 +34,14 @@ export const createPublishGitlabIssueAction = (options: {
   return createTemplateAction<{
     repoUrl: string;
     title: string;
-    description: string;
-    branchName: string;
     targetPath: string;
-    token?: string;
     /** @deprecated Use projectPath instead */
     projectid?: string;
-    removeSourceBranch?: boolean;
   }>({
     id: 'publish:gitlab:create-issue',
     schema: {
       input: {
-        required: ['repoUrl', 'targetPath', 'branchName'],
+        required: ['repoUrl', 'targetPath', 'title'],
         type: 'object',
         properties: {
           repoUrl: {
@@ -61,36 +55,15 @@ export const createPublishGitlabIssueAction = (options: {
             title: 'projectid',
             description: 'Project ID/Name(slug) of the Gitlab Project',
           },
-          title: {
-            type: 'string',
-            title: 'Merge Request Name',
-            description: 'The name for the merge request',
-          },
-          description: {
-            type: 'string',
-            title: 'Merge Request Description',
-            description: 'The description of the merge request',
-          },
-          branchName: {
-            type: 'string',
-            title: 'Destination Branch name',
-            description: 'The description of the merge request',
-          },
           targetPath: {
             type: 'string',
-            title: 'Repository Subdirectory',
+            title: 'Filename of the onboarding checklist to use',
             description: 'Subdirectory of repository to apply changes to',
           },
-          token: {
-            title: 'Authentication Token',
+          title: {
             type: 'string',
-            description: 'The token to use for authorization to GitLab',
-          },
-          removeSourceBranch: {
-            title: 'Delete source branch',
-            type: 'boolean',
-            description:
-              'Option to delete source branch once the MR has been merged. Default: false',
+            title: 'Title of the issue',
+            description: `Title for the issue`,
           },
         },
       },
@@ -105,10 +78,10 @@ export const createPublishGitlabIssueAction = (options: {
             title: 'Gitlab Project path',
             type: 'string',
           },
-          mergeRequestURL: {
-            title: 'MergeRequest(MR) URL',
+          issueUrl: {
+            title: 'Issue URL',
             type: 'string',
-            description: 'Link to the merge request in GitLab',
+            description: 'Link to the Issue in GitLab',
           },
         },
       },
@@ -137,8 +110,8 @@ export const createPublishGitlabIssueAction = (options: {
         throw new InputError(`No token available for host ${host}`);
       }
 
-      const token = ctx.input.token ?? integrationConfig.config.token!;
-      const tokenType = ctx.input.token ? 'oauthToken' : 'token';
+      const token = integrationConfig.config.token!;
+      const tokenType = 'token';
 
       const api = new Gitlab({
         host: integrationConfig.config.baseUrl,
@@ -152,11 +125,12 @@ export const createPublishGitlabIssueAction = (options: {
       const fileContents = await serializeDirectoryContents(targetPath, {
         gitignore: true,
       });
-
-      const desc = fileContents.map(file => file.content.toString()).join();
+      console.log('Getting file contents for ', ctx.input.targetPath);
+      const desc = fileContents
+        .find(file => file.path === ctx.input.targetPath)
+        ?.content.toString();
 
       const projects = await api.Projects.show(projectPath);
-      console.log('got project', projects);
 
       const issue = {
         title: ctx.input.title,
@@ -171,7 +145,7 @@ export const createPublishGitlabIssueAction = (options: {
 
         ctx.output('projectid', projectPath);
         ctx.output('projectPath', projectPath);
-        ctx.output('mergeRequestUrl', issueRes.web_url);
+        ctx.output('issueUrl', issueRes.web_url);
       } catch (e) {
         throw new InputError(
           `Creating the issue to ${projectPath} failed ${e}`,
